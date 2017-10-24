@@ -1,0 +1,9 @@
+##
+# HUBzero Solr Index Task Initiator Cron Job
+##
+
+# Format is:
+# min hour day-of-month month day-of-week user command...
+#
+0,30 * * * * hubzero-solr umask 077; /usr/bin/hzsolrindex 2>&1 >> /var/log/hzsolrindex.log 
+

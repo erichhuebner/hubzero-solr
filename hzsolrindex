@@ -1,0 +1,581 @@
+#!/usr/bin/python
+from optparse import OptionParser
+import httplib, urllib
+import json 
+import ssl
+from time import sleep, time
+import subprocess
+import re
+import ConfigParser
+
+nossl = False
+broken = []
+token = ''
+
+class solrDocument():
+	def __init__(self):
+		self.title = ''
+		self.description = ''
+		self.raw_content = ''
+		self.doi = ''
+		self.url = ''
+		self.author = []
+ 		self.owner = ''
+		self.owner_type = ''
+		self.id = ''
+		self.access_level = ''
+		self.hubtype = ''
+		self.tags = []
+
+	def map(self,content):
+		for key in vars(self).keys():
+			if key in content:
+				setattr(self, key, content[key])
+		return self
+				
+	def toJson(self):
+		return json.dumps(self.__dict__)
+
+def postSolrDocument(jsonDocument = []):
+	selector = '/solr/hubzero-solr-core/update/json?commit=true&overwrite=true'
+	cnt = 0
+	payload = '['
+	for doc in jsonDocument:
+		payload = payload + str(doc)
+		if cnt < len(jsonDocument) - 1:
+			payload = payload + ','
+		else:
+			payload = payload
+
+		cnt = cnt + 1
+	payload = payload + ']'
+	
+	h = httplib.HTTPConnection(solrhost,int(solrport))
+
+	h.putrequest('POST', selector)
+	h.putheader('content-type', 'application/json')
+	h.putheader('content-length', str(len(payload)))
+	h.putheader('commit', 'true')
+	h.endheaders()
+	h.send(payload)
+	response = h.getresponse()
+
+	if response.status == 200:
+		return True
+	else:
+		print "##### ERRORED RESPONSE #####"
+		print response.read()
+		return False
+
+def cleanup():
+	
+	listUrl = '/api/v1.0/search/blacklist'
+	parameters = { 
+	}
+	response = get_request(host, listUrl, parameters)
+	ratelimit_spinlock(response)
+	response = json.loads(response.read())
+	blacklist = response['blacklist']
+	
+	if len(blacklist) <= 0:
+		return True
+
+	# Fixme: Make one query call
+	for documentID in blacklist:
+		selector = '/solr/hubzero-solr-core/update/?commit=true&stream.body=<delete><query>id:' + documentID + '</query></delete>'
+		print selector
+		payload = ''
+	
+		h = httplib.HTTPConnection(solrhost,int(solrport))
+		h.putrequest('POST', selector)
+		h.putheader('content-type', 'application/json')
+		h.putheader('commit', 'true')
+		h.endheaders()
+		h.send(payload)
+		response = h.getresponse()
+
+	if response.status == 200:
+		return True
+	else:
+		print "##### ERRORED RESPONSE #####"
+		print response.read()
+		return False
+
+def post_multipart(host, selector, fields, files):
+	"""
+	Post fields and files to an http host as multipart/form-data.
+	fields is a sequence of (name, value) elements for regular form fields.
+	files is a sequence of (name, filename, value) elements for data to be uploaded as files
+	Return the server's response object.
+	"""
+
+	content_type, body = encode_multipart_formdata(fields, files)
+
+	if nossl == True:
+		h = httplib.HTTPSConnection(host,timeout=5, context=ssl._create_unverified_context())
+	else:
+		h = httplib.HTTPSConnection(host)
+
+	h.putrequest('POST', selector)
+	h.putheader('content-type', content_type)
+	h.putheader('authorization', 'Bearer ' + token)
+	h.putheader('content-length', str(len(body)))
+	h.endheaders()
+	h.send(body)
+	return h.getresponse()
+
+def get_request(host, selector, fields):
+	if nossl == True:
+		h = httplib.HTTPSConnection(host,timeout=5, context=ssl._create_unverified_context())
+	else:
+		h = httplib.HTTPSConnection(host)
+
+	selector = selector + '?' + urllib.urlencode(fields)
+
+	h.putrequest('GET', selector)
+	h.putheader('content-type', 'application/json')
+	h.putheader('authorization', 'Bearer ' + token)
+	h.endheaders()
+	return h.getresponse()
+
+def encode_multipart_formdata(fields, files):
+	"""
+	fields is a sequence of (name, value) elements for regular form fields.
+	files is a sequence of (filename, value) elements for data to be uploaded as files
+	Return (content_type, body) ready for httplib.HTTP instance
+	"""
+	BOUNDARY = '-------HubzeroSearchIndex_$'
+	CRLF = '\r\n'
+	L = []
+	for (key, value) in fields:
+		L.append('--' + BOUNDARY)
+		L.append('Content-Disposition: form-data; name="%s"' % key)
+		L.append('')
+		L.append(str(value))
+	for index, (filename, value) in enumerate(files):
+		L.append('--' + BOUNDARY)
+		L.append('Content-Disposition: form-data; name="attachments[%u]"; filename="%s"' % (index, filename))
+		L.append('Content-Type: %s' % get_content_type(filename))
+		L.append('')
+		L.append(str(value))
+	L.append('--' + BOUNDARY + '--')
+	L.append('')
+	body = CRLF.join(L)
+	content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
+	return content_type, body
+
+def get_content_type(filename):
+	return mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+def indexGroups(full = False, ids = []):
+	groupDocs = []
+
+	if full == True:
+		listUrl = '/api/v1.1/groups/list'
+		listFields=[
+			("limit", "all"),
+			("fields", "gidNumber"),
+			("sortby", "gidNumber")
+		]
+		response = post_multipart(host, listUrl, listFields, files=[])
+		ids = json.loads(response.read())
+
+	for id in ids:
+		if hasattr(id, '__iter__') and 'gidNumber' in id:
+			id = id['gidNumber']
+
+		parameters = { "searchable" : "true"}
+		response = get_request(host, '/api/v1.1/groups/' + str(id), parameters)
+				
+		content = json.loads(response.read())
+		document = solrDocument()
+	        groupDocs.append(document.map(content).toJson())
+	        ratelimit_spinlock(response)
+
+	postSolrDocument(groupDocs)
+
+def indexPublications(full = False, ids = []):
+	docs = []
+	complete = 0
+	index = 0
+	limit = 100
+	start = 0
+	total = 0
+
+	if full == True:
+		while (complete == 0):
+			listUrl = '/api/v1.1/publications/list'
+			parameters = { 
+				"searchable" : "true",
+				"limit" : limit,
+				"start" : start,
+			}
+
+			response = get_request(host, listUrl, parameters)
+			ratelimit_spinlock(response)
+			response = json.loads(response.read())
+
+			if 'publications' not in response or (index >= total and total != 0):
+				complete = 1
+			else:
+				index = index + len(response['publications'])
+				start = start + limit
+				total = response['total']
+
+				for publication in response['publications']:
+					document = solrDocument()
+					docs.append(document.map(publication).toJson())
+				postSolrDocument(docs)
+
+def indexResources(full = False, ids = []):
+	complete = 0
+	index = 0
+	limit = 100
+	start = 0
+	total = 0
+
+	if full == True:
+		while (complete == 0):
+			docs = []
+			listUrl = '/api/v1.1/resources/list'
+			parameters = { 
+				"searchable" : "true",
+				"limit" : limit,
+				"limitstart" : start,
+			}
+
+			response = get_request(host, listUrl, parameters)
+			ratelimit_spinlock(response)
+			response = json.loads(response.read())
+
+			if 'resources' not in response or (index >= total and total != 0):
+				complete = 1
+			else:
+				index = index + len(response['resources'])
+				start = start + limit
+				total = response['total']
+
+				for resource in response['resources']:
+					document = solrDocument()
+					docs.append(document.map(resource).toJson())
+				postSolrDocument(docs)
+
+def indexProjects(full = False, ids = []):
+	complete = 0
+	index = 0
+	limit = 100
+	start = 0
+	total = 0
+
+	if full == True:
+		while (complete == 0):
+			docs = []
+			listUrl = '/api/v1.1/projects/list'
+			parameters = { 
+				"searchable" : "true",
+				"limit" : limit,
+				"start" : start,
+			}
+
+			response = get_request(host, listUrl, parameters)
+			ratelimit_spinlock(response)
+			response = json.loads(response.read())
+
+			if 'projects' not in response or (index >= total and total != 0):
+				complete = 1
+			else:
+				index = index + len(response['projects'])
+				start = start + limit
+				total = response['total']
+
+				for project in response['projects']:
+					document = solrDocument()
+					docs.append(document.map(project).toJson())
+				postSolrDocument(docs)
+
+def indexCitations(full = False, ids = []):
+	complete = 0
+	index = 0
+	limit = 100
+	start = 0
+	total = 0
+
+	if full == True:
+		while (complete == 0):
+			docs = []
+			listUrl = '/api/v1.1/citations/list'
+			parameters = { 
+				"searchable" : "true",
+				"limit" : limit,
+				"limitstart" : start,
+			}
+
+			response = get_request(host, listUrl, parameters)
+			ratelimit_spinlock(response)
+			response = json.loads(response.read())
+
+			if 'citations' not in response or (int(index) >= int(total) and total != 0):
+				complete = 1
+			else:
+				index = index + len(response['citations'])
+				start = start + limit
+				total = response['total']
+
+				for citation in response['citations']:
+					document = solrDocument()
+					docs.append(document.map(citation).toJson())
+				postSolrDocument(docs)
+
+def indexMembers(full = False, ids = []):
+	complete = 0
+	index = 0
+	limit = 100
+	start = 0
+	total = 0
+
+	if full == True:
+		while (complete == 0):
+			docs = []
+			listUrl = '/api/v1.1/members/list'
+			parameters = { 
+				"searchable" : "true",
+				"limit" : limit,
+				"limitstart" : start,
+			}
+
+			response = get_request(host, listUrl, parameters)
+			ratelimit_spinlock(response)
+			response = json.loads(response.read())
+
+			if 'members' not in response or (int(index) >= int(total) and total != 0):
+				complete = 1
+			else:
+				index = index + len(response['members'])
+				start = start + limit
+				total = response['total']
+
+				for member in response['members']:
+					document = solrDocument()
+					docs.append(document.map(member).toJson())
+				postSolrDocument(docs)
+
+def indexCourses(full = False, ids = []):
+	complete = 0
+	index = 0
+	limit = 100
+	start = 0
+	total = 0
+
+	if full == True:
+		while (complete == 0):
+			docs = []
+			listUrl = '/api/v1.0/courses/list'
+			parameters = { 
+				"searchable" : "true",
+				"limit" : limit,
+				"limitstart" : start,
+			}
+
+			response = get_request(host, listUrl, parameters)
+			ratelimit_spinlock(response)
+			response = json.loads(response.read())
+
+			if 'courses' not in response or (int(index) >= int(total) and total != 0):
+				complete = 1
+			else:
+				index = index + len(response['courses'])
+				start = start + limit
+				total = response['total']
+
+				for course in response['courses']:
+					document = solrDocument()
+					docs.append(document.map(course).toJson())
+				postSolrDocument(docs)
+
+def indexContent(full = False, ids = []):
+	complete = 0
+	index = 0
+	limit = 100
+	start = 0
+	total = 0
+
+	if full == True:
+		while (complete == 0):
+			docs = []
+			listUrl = '/api/v1.0/content/list'
+			parameters = { 
+				"searchable" : "true",
+				"limit" : limit,
+				"limitstart" : start,
+			}
+
+			response = get_request(host, listUrl, parameters)
+			ratelimit_spinlock(response)
+			response = json.loads(response.read())
+
+			if 'content' not in response or (int(index) >= int(total) and total != 0):
+				complete = 1
+			else:
+				index = index + len(response['content'])
+				start = start + limit
+				total = response['total']
+
+				for page in response['content']:
+					document = solrDocument()
+					docs.append(document.map(page).toJson())
+				postSolrDocument(docs)
+
+def indexKb(full = False, ids = []):
+	complete = 0
+	index = 0
+	limit = 100
+	start = 0
+	total = 0
+
+	if full == True:
+		while (complete == 0):
+			docs = []
+			listUrl = '/api/v1.0/kb/list'
+			parameters = { 
+				"searchable" : "true",
+				"limit" : limit,
+				"limitstart" : start,
+			}
+
+			response = get_request(host, listUrl, parameters)
+			ratelimit_spinlock(response)
+			response = json.loads(response.read())
+
+			if 'content' not in response or (int(index) >= int(total) and total != 0):
+				complete = 1
+			else:
+				index = index + len(response['content'])
+				start = start + limit
+				total = response['total']
+
+				for page in response['content']:
+					document = solrDocument()
+					docs.append(document.map(page).toJson())
+				postSolrDocument(docs)
+
+def fullIndex():
+	indexResources(True)
+	indexContent(True)
+	indexKb(True)
+	indexCourses(True)
+	indexCitations(True)
+	indexPublications(True)
+	indexProjects(True)
+	indexGroups(True)
+	indexMembers(True)
+	cleanup()
+
+def ratelimit_spinlock(response):
+	headers = dict(response.getheaders())
+	ratelimited = False
+
+	if 'x-ratelimit-limit' in headers and 'x-ratelimit-remaining' in headers:
+		diff = (float(headers['x-ratelimit-limit']) - float(headers['x-ratelimit-remaining'])) / float(headers['x-ratelimit-limit'])
+		if diff > 0.95:
+			sleep(10)
+	else:
+		ratelimited = True
+		if ratelimited == True:
+			sleep(10)
+			ratelimited = False
+
+def configureRequests():
+	config = ConfigParser.ConfigParser()
+	if config.read("/etc/hubzero.conf") != []:
+		try:
+			if config.has_option('DEFAULT','site'):
+				site = config.get('DEFAULT','site')
+				try:
+					uri = config.get(site,'uri')
+					if uri.startswith('https://'):
+						host = uri[len('https://'):]
+					elif uri.startswith('http://'):
+						host = uri[len('http://'):]
+					else:
+						host = uri
+
+					documentroot = config.get(site,'documentroot')
+					path = documentroot + '/app/config/solr.json'
+					with open(path) as config_file:
+						config = json.load(config_file)
+						clientID = config['solr_client_id']
+						clientSecret = config['solr_client_secret']
+						username = config['solr_username']
+						password = config['solr_password']
+						solrhost = config['solr_host']
+						solrport = config['solr_port']
+				except:
+					return False
+					pass
+		except:
+			return False
+			pass
+
+		authUrl = '/developer/oauth/token'
+		data = [
+			("client_id", clientID),
+			("client_secret", clientSecret),
+			("grant_type", "password"),
+			("username", username),
+			("password", password)
+		]
+
+		content_type, body = encode_multipart_formdata(data, files=[])
+
+		if nossl == True:
+			h = httplib.HTTPSConnection(host,timeout=5, context=ssl._create_unverified_context())
+		else:
+			h = httplib.HTTPSConnection(host)
+
+		h.putrequest('POST', authUrl)
+		h.putheader('content-type', content_type)
+		h.putheader('content-length', str(len(body)))
+		h.endheaders()
+		h.send(body)
+		payload = json.loads(h.getresponse().read())
+		access_token = payload['access_token']
+
+	return access_token,host,solrhost,solrport
+
+def main():
+	parser = OptionParser()
+	parser.add_option("--fullindex", action="store_true", dest="fullindex" ,
+		default=False,
+		help="flush and repopulate the work queue")
+	parser.add_option("--no-ssl", action="store_true", dest="nossl" ,
+		default=False,
+		help="**UNSAFE!** Disable SSL verification for testing purposes only.")
+	parser.add_option("--clean", action="store_true", dest="cleanupindex" ,
+		default=False,
+		help="Removes entries on the blacklist.")
+	(options, args) = parser.parse_args()
+	# @TODO: Touch a file so that CMS cron can monitor the work.
+
+	"""
+	For development purposes, disable the SSL verification
+	Verification is always enabled by default
+	"""
+	global nossl
+	nossl = options.nossl
+	global token
+	global host
+	global solrhost
+	global solrport
+	token,host,solrhost,solrport = configureRequests()
+
+	if options.cleanupindex == True:
+		cleanup()
+		return True
+
+	# @TODO: Command-line switches to initiate a queue-filler or just processes the work queue.
+	if options.fullindex == True:
+		fullIndex()
+	else:
+		fullIndex()
+
+main()

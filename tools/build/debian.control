@@ -1,0 +1,13 @@
+Source: hubzero-solr
+Section: misc
+Priority: optional
+Maintainer: Nicholas J. Kisseberth <nkissebe@purdue.edu>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.8.4
+Homepage: http://hubzero.org
+
+Package: hubzero-solr
+Architecture: any
+Depends: adduser,  ${shlibs:Depends}, ${misc:Depends}
+Description: HUBzero Solr
+ HUBzero packaging of the Solr search engine
