@@ -45,9 +45,7 @@ JAVA_INSTALL_DIR="${JAVA_EXTRACT_DIR}/${JAVA_DIR}"
 JAVA_BASENAME=jdk
 
 all:
-	#@true
-	wget -q -N http://help.hubzero.org/app/site/addons/solr/server-jre-8u102-linux-x64.tar.gz -O server-jre-8u102-linux-x64.tar.gz
-	wget -q -N http://help.hubzero.org/app/site/addons/solr/solr-6.1.0.tgz -O solr-6.1.0.tgz
+	@true
 
 install:
 	@# extract
