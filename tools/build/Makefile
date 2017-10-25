@@ -27,7 +27,7 @@
 # HUBzero is a registered trademark of HUBzero Foundation, LLC.
 #
 
-SOLR_ARCHIVE=solr-6.1.0.tgz
+SOLR_ARCHIVE=$RPM_SOURCE_DIR/solr-6.1.0.tgz
 SOLR_DIR=solr-6.1.0
 SOLR_EXTRACT_DIR=/usr/share/hubzero-solr
 SOLR_INSTALL_DIR="${SOLR_EXTRACT_DIR}/${SOLR_DIR}"
@@ -38,7 +38,7 @@ SOLR_USER=hubzero-solr
 SOLR_VAR_DIR=/srv/hubzero-solr
 SOLR_PORT=8445
 
-JAVA_ARCHIVE=server-jre-8u102-linux-x64.tar.gz
+JAVA_ARCHIVE=$RPM_SOURCE_DIR/server-jre-8u102-linux-x64.tar.gz
 JAVA_DIR=jdk1.8.0_102
 JAVA_EXTRACT_DIR=/usr/lib/hubzero-solr
 JAVA_INSTALL_DIR="${JAVA_EXTRACT_DIR}/${JAVA_DIR}"
