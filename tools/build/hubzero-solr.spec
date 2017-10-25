@@ -107,6 +107,8 @@ This version has been customized for use in the HUBzero environment.
 /usr/lib/hubzero-solr
 /etc/init.d/hubzero-solr
 /etc/default/hubzero-solr.in.sh
+/etc/cron.d/cron-hzsolrindex
+/usr/bin/hzsolrindex
 
 %doc $RPM_SOURCE_DIR/copyright
 
