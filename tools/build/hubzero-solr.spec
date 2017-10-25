@@ -46,7 +46,7 @@ This version has been customized for use in the HUBzero environment.
                 -c "HUBzero Solr Search Service Account" hubzero-solr
 
 %post
-        SOLR_ARCHIVE=solr-6.1.0.tgz
+        SOLR_ARCHIVE=$RPM_SOURCE_DIR/solr-6.1.0.tgz
         SOLR_DIR=solr-6.1.0
         SOLR_EXTRACT_DIR=/usr/share/hubzero-solr
         SOLR_INSTALL_DIR="${SOLR_EXTRACT_DIR}/${SOLR_DIR}"
