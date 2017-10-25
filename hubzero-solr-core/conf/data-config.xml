@@ -1,0 +1,39 @@
+<dataConfig>
+<dataSource type="JdbcDataSource" 
+	driver="com.mysql.jdbc.Driver" 
+	url="jdbc:mysql://localhost:3306/nanohub" 
+	user="root" 
+	password="n4C7wbMJUfe6A4" />
+
+<document name="database">
+<entity name="courses" query="SELECT * FROM jos_courses">
+	<field column="id" name="id"/> 
+	<field column="title" name="title"/> 
+	<field column="description" name="description"/> 
+	<field column="blurb" name="full_text"/>
+	<!-- <field column="" name="scope"/> -->
+	<field column="group_id" name="scope_id"/>
+	<field column="created" name="date_created"/>
+	<field column="access" name="access_level"/>
+	<field column="alias" name="alias"/>
+	<field column="state" name="state"/>
+<!--	<field column="" name="permission"/> -->
+<!-- <field column="" name="keywords"/> -->
+</entity>
+
+<entity name="resources" query="SELECT * FROM jos_resources">
+	<field column="id" name="id"/> 
+	<field column="title" name="title"/> 
+	<field column="introtext" name="description"/> 
+	<field column="fulltxt" name="full_text"/>
+	<field column="group_id" name="scope_id"/>
+	<field column="created" name="date_created"/>
+	<field column="access" name="access_level"/>
+	<field column="alias" name="alias"/>
+	<field column="published" name="state"/>
+	<field column="modified" name="date_modified"/>
+<!--	<field column="" name="permission"/> -->
+<!-- <field column="" name="keywords"/> -->
+</entity>
+</document>
+</dataConfig>

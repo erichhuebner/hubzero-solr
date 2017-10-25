@@ -1,0 +1,10 @@
+<dataConfig>
+<dataSource type="JdbcDataSource" driver="com.mysql.jdbc.Driver" url="jdbc:mysql://localhost:3306/solrtest" user="root" password="UbHTx3HZDe3uc7" batchSize="1" />
+<document name="courses">
+<entity name="course" query="SELECT * FROM jos_courses">
+	<field column="id" name="id"/> 
+	<field column="title" name="title"/> 
+	<field column="blurb" name="blurb"/> 
+</entity>
+</document>
+</dataConfig>
