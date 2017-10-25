@@ -33,7 +33,7 @@ This version has been customized for use in the HUBzero environment.
 %setup -q -n %{name}-%{version}
 
 %build
-        make
+        make --makefile=/home/abuild/rpmbuild/SOURCES/Makefile
 
 %install
         rm -rf $RPM_BUILD_ROOT
