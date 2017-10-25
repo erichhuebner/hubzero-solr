@@ -37,7 +37,7 @@ This version has been customized for use in the HUBzero environment.
 
 %install
         rm -rf $RPM_BUILD_ROOT
-        make install DESTDIR=$RPM_BUILD_ROOT
+        make --makefile=/home/abuild/rpmbuild/SOURCES/Makefile install DESTDIR=$RPM_BUILD_ROOT
 
 %pre
         getent group hubzero-solr >/dev/null || groupadd -r hubzero-solr
