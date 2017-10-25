@@ -45,7 +45,7 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-SOLR_ARCHIVE=solr-6.1.0.tgz
+SOLR_ARCHIVE=${RPM_SOURCE_DIR}/solr-6.1.0.tgz
 SOLR_DIR=solr-6.1.0
 SOLR_EXTRACT_DIR=/usr/share/hubzero-solr
 SOLR_INSTALL_DIR="${SOLR_EXTRACT_DIR}/${SOLR_DIR}"
