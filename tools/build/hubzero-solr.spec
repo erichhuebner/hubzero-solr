@@ -99,7 +99,7 @@ This version has been customized for use in the HUBzero environment.
 
 %clean
         rm -rf $RPM_BUILD_ROOT
-        make clean
+        make --makefile=$RPM_SOURCE_DIR/Makefile clean
 
 %files
 %defattr(-,root,root,-)
