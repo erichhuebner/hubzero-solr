@@ -33,11 +33,11 @@ This version has been customized for use in the HUBzero environment.
 %setup -q -n %{name}-%{version}
 
 %build
-        make --makefile=/home/abuild/rpmbuild/SOURCES/Makefile
+        make --makefile=$RPM_SOURCE_DIR/Makefile
 
 %install
         rm -rf $RPM_BUILD_ROOT
-        make --makefile=/home/abuild/rpmbuild/SOURCES/Makefile install DESTDIR=$RPM_BUILD_ROOT
+        make --makefile=$RPM_SOURCE_DIR/Makefile install DESTDIR=$RPM_BUILD_ROOT
 
 %pre
         getent group hubzero-solr >/dev/null || groupadd -r hubzero-solr
@@ -108,6 +108,6 @@ This version has been customized for use in the HUBzero environment.
 /etc/init.d/hubzero-solr
 /etc/default/hubzero-solr.in.sh
 
-%doc copyright
+%doc $RPM_SOURCE_DIR/copyright
 
 %changelog
