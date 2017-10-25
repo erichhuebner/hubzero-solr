@@ -49,7 +49,7 @@ all:
 
 install:
 	@# extract
-	@echo "\nExtracting ${SOLR_ARCHIVE} to ${DESTDIR}/${SOLR_EXTRACT_DIR}\n"
+	@echo "Extracting ${SOLR_ARCHIVE} to ${DESTDIR}/${SOLR_EXTRACT_DIR}"
 	mkdir -p ${DESTDIR}/${SOLR_INSTALL_DIR}
 	mkdir -p ${USRBIN}
 	tar zxf "${SOLR_ARCHIVE}" -C "${DESTDIR}/${SOLR_EXTRACT_DIR}"
@@ -62,12 +62,12 @@ install:
 	install --mode 0755 -D cron-hzsolrindex ${DESTDIR}/etc/cron.d/cron-hzsolrindex
 
 	@# create a symlink for easier scripting
-	@echo "\nInstalling symlink ${DESTDIR}/${SOLR_EXTRACT_DIR}/${SOLR_BASENAME} -> ${DESTDIR}/${SOLR_INSTALL_DIR} ...\n"
+	@echo "Installing symlink ${DESTDIR}/${SOLR_EXTRACT_DIR}/${SOLR_BASENAME} -> ${DESTDIR}/${SOLR_INSTALL_DIR} ..."
 	ln -s "${SOLR_INSTALL_DIR}" "${DESTDIR}/${SOLR_EXTRACT_DIR}/${SOLR_BASENAME}"
 	ln -s "${JAVA_INSTALL_DIR}" "${DESTDIR}/${JAVA_EXTRACT_DIR}/${JAVA_BASENAME}"
 	
 	@# install init.d script
-	@echo "\nInstalling ${DESTDIR}/etc/init.d/${SOLR_SERVICE} script ...\n"
+	@echo "Installing ${DESTDIR}/etc/init.d/${SOLR_SERVICE} script ..."
 	mkdir -p "${DESTDIR}/etc/init.d"
 	chmod 0755 "${DESTDIR}/etc/init.d"
 	cp -p "${DESTDIR}/${SOLR_INSTALL_DIR}/bin/init.d/solr" "${DESTDIR}/etc/init.d/${SOLR_SERVICE}"
@@ -80,7 +80,7 @@ install:
 	@# user does not have a shell, run the init script 
 	sed -i -e "s/su -c/su -s \/bin\/sh -c/g" "${DESTDIR}/etc/init.d/${SOLR_SERVICE}"
 
-	@echo "\nInstalling ${DESTDIR}/etc/default/${SOLR_SERVICE}.in.sh ...\n"
+	@echo "Installing ${DESTDIR}/etc/default/${SOLR_SERVICE}.in.sh ..."
 	@# install/move configuration
 	mkdir -p "${DESTDIR}/etc/default"
 	chmod 0755 "${DESTDIR}/etc/default"
