@@ -97,8 +97,8 @@ install:
 
 	sed -i -e "s#solr.log=.*#solr.log=\$${solr.solr.home}/../logs#" "${DESTDIR}/${SOLR_INSTALL_DIR}/server/resources/log4j.properties"
 
-	cp -r ${RPM_SOURCE_DIR}/hubzero-solr-core "${DESTDIR}/${SOLR_INSTALL_DIR}"
-	mkdir "${DESTDIR}/${SOLR_INSTALL_DIR}/hubzero-solr-core/lib"
+	#cp -r hubzero-solr-core "${DESTDIR}/${SOLR_INSTALL_DIR}"
+	mkdir -p "${DESTDIR}/${SOLR_INSTALL_DIR}/hubzero-solr-core/lib"
 	find "${DESTDIR}/${SOLR_INSTALL_DIR}/hubzero-solr-core" -type d -print0 | xargs -0 chmod 0750
 	find "${DESTDIR}/${SOLR_INSTALL_DIR}/hubzero-solr-core" -type f -print0 | xargs -0 chmod 0640
 
